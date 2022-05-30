@@ -31,14 +31,25 @@ class SleepTrackerViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val _tonight = MutableLiveData<SleepNight?>()
+    private var _tonight = MutableLiveData<SleepNight?>()
     private val _nights = database.getAllNights()
     private val _navigateToSleepQuality = MutableLiveData<SleepNight>()
+    private var _showSnackBarEvent = MutableLiveData<Boolean>()
 
     val navigateToSleepQuality: LiveData<SleepNight> get() = _navigateToSleepQuality
+    val showSnackBarEvent: LiveData<Boolean> get() = _showSnackBarEvent
 
     val nightsString = Transformations.map(_nights) { nights ->
         formatNights(nights, application.resources)
+    }
+    val clearButtonVisible = Transformations.map(_nights) { nights ->
+        nights?.isNotEmpty()
+    }
+    val startButtonVisible = Transformations.map(_tonight) { tonight ->
+        tonight == null
+    }
+    val stopButtonVisible = Transformations.map(_tonight) { tonight ->
+        tonight != null
     }
 
     init {
@@ -60,12 +71,29 @@ class SleepTrackerViewModel(
         }
     }
 
-    fun onStopTracking() {
+    /*fun onStopTracking() {
         viewModelScope.launch {
             val oldNight = _tonight.value ?: return@launch
             oldNight.endTimeMilli = System.currentTimeMillis()
             update(oldNight)
 
+            _navigateToSleepQuality.value = oldNight
+        }
+    }*/
+    fun onStopTracking() {
+        viewModelScope.launch {
+            // In Kotlin, the return@label syntax is used for specifying which function among
+            // several nested ones this statement returns from.
+            // In this case, we are specifying to return from launch(),
+            // not the lambda.
+            val oldNight = _tonight.value ?: return@launch
+
+            // Update the night in the database to add the end time.
+            oldNight.endTimeMilli = System.currentTimeMillis()
+
+            update(oldNight)
+
+            // Set state to navigate to the SleepQualityFragment.
             _navigateToSleepQuality.value = oldNight
         }
     }
@@ -74,6 +102,7 @@ class SleepTrackerViewModel(
         viewModelScope.launch {
             database.clear()
             _tonight.value = null
+            _showSnackBarEvent.value = true
         }
     }
 
@@ -96,5 +125,9 @@ class SleepTrackerViewModel(
 
     fun doneNavigating() {
         _navigateToSleepQuality.value = null
+    }
+
+    fun doneShowingSnackBar() {
+        _showSnackBarEvent.value = false
     }
 }
