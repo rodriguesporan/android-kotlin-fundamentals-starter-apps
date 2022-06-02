@@ -44,6 +44,10 @@ class SleepTrackerViewModel(
     val navigateToSleepQuality: LiveData<SleepNight>
         get() = _navigateToSleepQuality
 
+    private val _navigateToSleepDetail = MutableLiveData<Long>()
+    val navigateToSleepDetail: LiveData<Long>
+        get() = _navigateToSleepDetail
+
     val startButtonVisible = Transformations.map(tonight) { null == it }
     val stopButtonVisible = Transformations.map(tonight) { null != it }
     val clearButtonVisible = Transformations.map(nights) { it?.isNotEmpty() }
@@ -88,8 +92,6 @@ class SleepTrackerViewModel(
 
     fun onStart() {
         viewModelScope.launch {
-            // Create a new night, which captures the current time,
-            // and insert it into the database.
             val newNight = SleepNight()
 
             insert(newNight)
@@ -100,31 +102,27 @@ class SleepTrackerViewModel(
 
     fun onStop() {
         viewModelScope.launch {
-            // In Kotlin, the return@label syntax is used for specifying which function among
-            // several nested ones this statement returns from.
-            // In this case, we are specifying to return from launch().
             val oldNight = tonight.value ?: return@launch
-
-            // Update the night in the database to add the end time.
             oldNight.endTimeMilli = System.currentTimeMillis()
 
             update(oldNight)
-
-            // Set state to navigate to the SleepQualityFragment.
             _navigateToSleepQuality.value = oldNight
         }
     }
 
     fun onClear() {
         viewModelScope.launch {
-            // Clear the database table.
             clear()
-
-            // And clear tonight since it's no longer in the database
             tonight.value = null
-
-            // Show a snackbar message, because it's friendly.
             _showSnackbarEvent.value = true
         }
+    }
+
+    fun onSleepNightClicked(id: Long) {
+        _navigateToSleepDetail.value = id
+    }
+
+    fun onSleepDetailNavigated() {
+        _navigateToSleepDetail.value = null
     }
 }

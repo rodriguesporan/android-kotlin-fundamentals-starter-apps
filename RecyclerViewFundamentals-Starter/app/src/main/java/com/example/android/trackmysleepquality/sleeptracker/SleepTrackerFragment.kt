@@ -25,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.GridLayoutManager
 import com.example.android.trackmysleepquality.R
 import com.example.android.trackmysleepquality.database.SleepDatabase
 import com.example.android.trackmysleepquality.databinding.FragmentSleepTrackerBinding
@@ -43,7 +44,9 @@ class SleepTrackerFragment : Fragment() {
         val sleepTrackerViewModel =
                 ViewModelProvider(
                         this, viewModelFactory).get(SleepTrackerViewModel::class.java)
-        val adapter = SleepNightAdapter()
+        val adapter = SleepNightAdapter(SleepNightListener { nightId ->
+            sleepTrackerViewModel.onSleepNightClicked(nightId)
+        })
         binding.sleepList.adapter = adapter
 
         sleepTrackerViewModel.nights.observe(viewLifecycleOwner, Observer {
@@ -66,7 +69,6 @@ class SleepTrackerFragment : Fragment() {
             }
         })
 
-        // Add an Observer on the state variable for Navigating when STOP button is pressed.
         sleepTrackerViewModel.navigateToSleepQuality.observe(viewLifecycleOwner, Observer { night ->
             night?.let {
                 this.findNavController().navigate(
@@ -75,6 +77,19 @@ class SleepTrackerFragment : Fragment() {
                 sleepTrackerViewModel.doneNavigating()
             }
         })
+
+        sleepTrackerViewModel.navigateToSleepDetail.observe(viewLifecycleOwner, Observer { nightId ->
+            nightId?.let {
+                this.findNavController().navigate(
+                    SleepTrackerFragmentDirections
+                        .actionSleepTrackerFragmentToSleepDetailFragment(nightId))
+                sleepTrackerViewModel.onSleepDetailNavigated()
+            }
+        })
+
+        val manager = GridLayoutManager(activity, 3, GridLayoutManager.VERTICAL, false)
+        binding.sleepList.layoutManager = manager
+
         return binding.root
     }
 }
